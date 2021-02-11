@@ -1,0 +1,38 @@
+./objects/lcd16x2_i2c.o: \
+  ..\..\Downloads\STM32-Tutorials-master\STM32-Tutorials-master\Tutorial\ 42\ -\ LCD16x2\ I2C\lcd16x2_i2c.c \
+  ..\..\Downloads\STM32-Tutorials-master\STM32-Tutorials-master\Tutorial\ 42\ -\ LCD16x2\ I2C\lcd16x2_i2c.h \
+  RTE\Device\STM32F091RCTx\STCubeGenerated\Inc\main.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal.h \
+  RTE\Device\STM32F091RCTx\STCubeGenerated\Inc\stm32f0xx_hal_conf.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_rcc.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_def.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include\stm32f0xx.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include\stm32f091xc.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include\core_cm0.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include\cmsis_version.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include\cmsis_compiler.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include\cmsis_armclang.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_compat.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_acle.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include\system_stm32f0xx.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_rcc_ex.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_gpio.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_gpio_ex.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_exti.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_dma.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_dma_ex.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_cortex.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_flash.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_flash_ex.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_i2c.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_i2c_ex.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_pwr.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_pwr_ex.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_uart.h \
+  C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_uart_ex.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h

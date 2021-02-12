@@ -1,5 +1,5 @@
 ./objects/stm32f0xx_hal_msp.o: \
-  C:\Users\Yentl\Desktop\testen\ DAC\RTE\Device\STM32F091RCTx\STCubeGenerated\Src\stm32f0xx_hal_msp.c \
+  C:\Users\Yentl\Desktop\ZonnestroomV2-GH\Zonnestroom\RTE\Device\STM32F091RCTx\STCubeGenerated\Src\stm32f0xx_hal_msp.c \
   RTE\Device\STM32F091RCTx\STCubeGenerated\Inc\main.h \
   C:\Users\Yentl\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal.h \
   RTE\Device\STM32F091RCTx\STCubeGenerated\Inc\stm32f0xx_hal_conf.h \

@@ -70,7 +70,7 @@ UART_HandleTypeDef huart2;
 	//In te stellen waarde van verbruiker voor overige productie
 	int DAC_Voltage_Out_value;
 	int DAC_Max_Voltage_Out_value = 4095;
-	int waarde_te_veel_geproduceerd = 123;
+	int waarde_te_veel_geproduceerd = 200;
 	int waarde_apparaat = 300;
 	float send_percent;
 	
@@ -153,6 +153,7 @@ int main(void)
 		Aansturen_DAC();
 		LCD_Update(Geproduceerde_KW, TijdTussenPulsen);
 		HAL_Delay(500);
+		
 		
     /* USER CODE END WHILE */
 
@@ -375,8 +376,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : B1_Pin PC11_Pin */
-  GPIO_InitStruct.Pin = B1_Pin|PC11_Pin;
+  /*Configure GPIO pins : B1_Pin PC11_Pin Button1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin|PC11_Pin|Button1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -387,6 +388,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Button2_Pin Button3_Pin */
+  GPIO_InitStruct.Pin = Button2_Pin|Button3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);

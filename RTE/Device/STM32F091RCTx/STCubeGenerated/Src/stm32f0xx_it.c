@@ -158,7 +158,6 @@ void RCC_CRS_IRQHandler(void)
   * @brief This function handles EXTI line 4 to 15 interrupts.
   */
 
-
 /**
   * @brief This function handles TIM16 global interrupt.
   */

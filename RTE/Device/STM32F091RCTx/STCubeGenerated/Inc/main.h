@@ -63,10 +63,9 @@ void Error_Handler(void);
 #define B1_EXTI_IRQn EXTI4_15_IRQn
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
-#define Button2_Pin GPIO_PIN_14
-#define Button2_GPIO_Port GPIOA
-#define Button3_Pin GPIO_PIN_15
-#define Button3_GPIO_Port GPIOA
+#define Button2_Pin GPIO_PIN_8
+#define Button2_GPIO_Port GPIOC
+#define Button2_EXTI_IRQn EXTI4_15_IRQn
 #define PC11_Pin GPIO_PIN_11
 #define PC11_GPIO_Port GPIOC
 #define PC11_EXTI_IRQn EXTI4_15_IRQn

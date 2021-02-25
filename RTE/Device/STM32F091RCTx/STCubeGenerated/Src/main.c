@@ -153,7 +153,7 @@ int main(void)
   {
 		Berekenen_KWH_Waarden();
 		Aansturen_DAC(Gemeten_KWh);
-		LCD_Update((float)Gemeten_KWh, send_percent*100);
+		//LCD_Update((float)Gemeten_KWh, send_percent*100);
 		HAL_Delay(500);
 		
 		

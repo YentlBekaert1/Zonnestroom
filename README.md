@@ -2,6 +2,9 @@
 
 Dit project maakt gebruik van het nucleo development board STM32F091RCT6 meer informatie hier: https://www.st.com/en/microcontrollers-microprocessors/stm32f091rc.html#overview
 
+![GitHub Logo](/images/schema.png)
+Format: ![Alt Text](url)
+
 ### Lijst met gerbuikte pinnen:
 * DAC => PA4
 * I2C => PB8 en PB9

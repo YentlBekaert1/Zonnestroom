@@ -133,10 +133,7 @@ int main(void)
   MX_TIM16_Init();
   MX_DAC_Init();
   /* USER CODE BEGIN 2 */
-	
-		//LCD INIT
-		lcd_init ();
-		LCD_Startup();
+
 		
 		//Start timer
 		//clock = 48MHZ Prescaler = 4800 -1 => 10Khz = 1 tick per 0.0001 sec = 100us
@@ -153,7 +150,6 @@ int main(void)
   {
 		Berekenen_KWH_Waarden();
 		Aansturen_DAC(Gemeten_KWh);
-		LCD_Update((float)Gemeten_KWh, send_percent*100);
 		HAL_Delay(500);
 		
 		
@@ -398,39 +394,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void LCD_Update(Gemeten_KWh, output_DAC){
-  char prod[10];
-	char verb[10];
-  sprintf(prod, "%d", Gemeten_KWh);
-	sprintf(verb, "%d", output_DAC);
-	
-	lcd_put_cur(0,8);
-	lcd_send_string("     ");
-	lcd_put_cur(1,7);
-	lcd_send_string("     ");
-	lcd_put_cur(0,9);
-	lcd_send_string(prod);
-	lcd_put_cur(1,9);
-	lcd_send_string(verb);
-}
-void LCD_Startup(void){
-	
-	
-	lcd_clear();
-	lcd_put_cur(0,0);
-	lcd_send_string("Gemeten:");
-	lcd_put_cur(0,8);
-	lcd_send_string("0");
-	lcd_put_cur(0,13);
-	lcd_send_string("kWH");
-	lcd_put_cur(1,0);
-	lcd_send_string("Output:");
-	lcd_put_cur(1,7);
-	lcd_send_string("0");
-	lcd_put_cur(1,13);
-	lcd_send_string("%");
 
-}
 //BESTUREN DAC
 void Aansturen_DAC(float kwh){
 		//bepalen hoeveel percent van de uitgang van de DAC mag aangestuurd worden.
@@ -456,58 +420,7 @@ void Berekenen_KWH_Waarden(void){
 		printf("The gemeten KWh : %f\n\n", Gemeten_KWh);
 }
 
-void Menu(void){
-	//menu init
-	char Menu_Items[5] [40] =
-		{ "Pulsen per KW",
-			"Vermogen verbr.",
-			"Menu Item 3",
-			"Menu Item 4",
-			"Close Menu",
-		};
-	lcd_clear();
-	int Selected_Menu_Item = 0;
-		
-	//als er op knop 1 gedrukt wordt, wordt het menu geopend. 
-	while(Open_menu == true){
-		lcd_put_cur(0,0);
-		lcd_send_string("Selecteer Item:");
-		lcd_put_cur(1,0);
-		lcd_send_string(Menu_Items[Selected_Menu_Item]);
-		
-		//duw op knop 2 om tussen menu items te switchen
-		if(__HAL_GPIO_EXTI_GET_FLAG(Button2_Pin))
-		{
-			if(Selected_Menu_Item < 4){
-					Selected_Menu_Item++;
-			}
-			else{
-				Selected_Menu_Item = 0;
-			}
-			
-			printf("button2 pressed");
-			lcd_clear();
-			lcd_put_cur(0,0);
-			lcd_send_string("Selecteer Item:");
-			lcd_put_cur(1,0);
-			lcd_send_string(Menu_Items[Selected_Menu_Item]);
-			HAL_GPIO_EXTI_IRQHandler(Button2_Pin);
-		}
-		//enter button ingdrukt
-		if(__HAL_GPIO_EXTI_GET_FLAG(Button1_Pin))
-		{
-			printf("enter\n");
-			HAL_GPIO_EXTI_IRQHandler(Button1_Pin);
-		}
-		
-		if(__HAL_GPIO_EXTI_GET_FLAG(B1_Pin)){
-			Open_menu = false;
-			LCD_Startup();
-			printf("close_Menu\n");
-		}
-	}
-}
-	
+
 //UART
 int fputc (int ch, FILE *f)
 {
@@ -528,11 +441,6 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 {
 	//Interrupt Button 1 button 
 	if(GPIO_Pin == Button1_Pin){
-			if(Open_menu == false){
-				printf("openmenu\n");
-				Open_menu = true;
-				Menu();
-			}
 	}
 	//Interrupt blauwe button button 
 	//if(GPIO_Pin == B1_Pin){

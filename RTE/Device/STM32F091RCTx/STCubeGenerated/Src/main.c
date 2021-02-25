@@ -60,9 +60,6 @@ UART_HandleTypeDef huart2;
 	//TIMER16	Variable
 	uint16_t timer_val;
 	
-	//variabeles zonnestroomV1	
-	volatile float kWh = 0, KWH=0, verbruikKWH=0, percent=0, doorsturen=0;
-	
 	//variablen voor pulsmeting
 	volatile uint32_t ticks = 0;
 	volatile uint32_t LastPulse = 0, TijdTussenPulsen = 0, CurrentPulse = 0;
@@ -70,12 +67,16 @@ UART_HandleTypeDef huart2;
 	//In te stellen waarde van verbruiker voor overige productie
 	int DAC_Voltage_Out_value;
 	int DAC_Max_Voltage_Out_value = 4095;
-	int waarde_te_veel_geproduceerd = 123;
-	int waarde_apparaat = 300;
+	int waarde_apparaat = 2000;
 	float send_percent;
 	
-	float Geproduceerde_KW = 0.0;
+	float Gemeten_KWh = 0.0;
 	float Pulsen_Per_KWH = 1000;
+	
+	//variablen voor menu
+	bool Open_menu = false;
+	bool Menu_Enter = false;
+	
 		
 /* USER CODE END PV */
 
@@ -88,9 +89,10 @@ static void MX_TIM16_Init(void);
 static void MX_DAC_Init(void);
 /* USER CODE BEGIN PFP */
 static void LCD_Startup(void);
-static void LCD_Update(int productie, int verbruik);
+static void LCD_Update(int Gemeten_KWh, int output_DAC);
 static void Berekenen_KWH_Waarden(void);
-static void Aansturen_DAC(void);
+static void Aansturen_DAC(float kwh);
+static void Menu(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -150,9 +152,10 @@ int main(void)
   while (1)
   {
 		Berekenen_KWH_Waarden();
-		Aansturen_DAC();
-		LCD_Update(Geproduceerde_KW, TijdTussenPulsen);
+		Aansturen_DAC(Gemeten_KWh);
+		LCD_Update((float)Gemeten_KWh, send_percent*100);
 		HAL_Delay(500);
+		
 		
     /* USER CODE END WHILE */
 
@@ -375,8 +378,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : B1_Pin PC11_Pin */
-  GPIO_InitStruct.Pin = B1_Pin|PC11_Pin;
+  /*Configure GPIO pins : B1_Pin Button2_Pin PC11_Pin Button1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin|Button2_Pin|PC11_Pin|Button1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -395,54 +398,114 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void LCD_Update(productie, verbruik){
+void LCD_Update(Gemeten_KWh, output_DAC){
   char prod[10];
 	char verb[10];
-  sprintf(prod, "%d", productie);
-	sprintf(verb, "%d", verbruik);
+  sprintf(prod, "%d", Gemeten_KWh);
+	sprintf(verb, "%d", output_DAC);
 	
-	lcd_put_cur(0,5);
-	lcd_send_string("        ");
-	lcd_put_cur(1,5);
-	lcd_send_string("        ");
-	lcd_put_cur(0,6);
+	lcd_put_cur(0,8);
+	lcd_send_string("     ");
+	lcd_put_cur(1,7);
+	lcd_send_string("     ");
+	lcd_put_cur(0,9);
 	lcd_send_string(prod);
-	lcd_put_cur(1,6);
+	lcd_put_cur(1,9);
 	lcd_send_string(verb);
 }
 void LCD_Startup(void){
+	
+	
 	lcd_clear();
 	lcd_put_cur(0,0);
-	lcd_send_string("Prod:");
-	lcd_put_cur(0,5);
+	lcd_send_string("Gemeten:");
+	lcd_put_cur(0,8);
 	lcd_send_string("0");
 	lcd_put_cur(0,13);
 	lcd_send_string("kWH");
 	lcd_put_cur(1,0);
-	lcd_send_string("Puls:");
-	lcd_put_cur(1,5);
+	lcd_send_string("Output:");
+	lcd_put_cur(1,7);
 	lcd_send_string("0");
 	lcd_put_cur(1,13);
-	lcd_send_string("ms");
-	//init delay
-	HAL_Delay(500);
+	lcd_send_string("%");
+
 }
 //BESTUREN DAC
-void Aansturen_DAC(void){
+void Aansturen_DAC(float kwh){
 		//bepalen hoeveel percent van de uitgang van de DAC mag aangestuurd worden.
-		send_percent = (float)waarde_te_veel_geproduceerd/(float)waarde_apparaat;
+		//*100 omdat waarde_apparaat voorlopig in W staat idpv KW
+		send_percent = ((float)kwh*1000)/(float)waarde_apparaat;
 		DAC_Voltage_Out_value = DAC_Max_Voltage_Out_value*send_percent;
 	
 		//verander de value van de DAC
-		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DAC_Voltage_Out_value);
-		
+		if(send_percent>1){
+			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DAC_Max_Voltage_Out_value);
+		}else{
+			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DAC_Voltage_Out_value);
+		}
 		//print naar de seriele poort
 		printf("The float value : %f\n", send_percent);
 		printf("DAC_Voltage_Out_value : %i\n", DAC_Voltage_Out_value);
 }
+
+//Bereken waarde KWH meter
 void Berekenen_KWH_Waarden(void){
 		float waarde = 3600000/Pulsen_Per_KWH;
-		Geproduceerde_KW = (float)waarde/TijdTussenPulsen;
+		Gemeten_KWh = (float)waarde/TijdTussenPulsen;
+		printf("The gemeten KWh : %f\n\n", Gemeten_KWh);
+}
+
+void Menu(void){
+	//menu init
+	char Menu_Items[5] [40] =
+		{ "Pulsen per KW",
+			"Vermogen verbr.",
+			"Menu Item 3",
+			"Menu Item 4",
+			"Close Menu",
+		};
+	lcd_clear();
+	int Selected_Menu_Item = 0;
+		
+	//als er op knop 1 gedrukt wordt, wordt het menu geopend. 
+	while(Open_menu == true){
+		lcd_put_cur(0,0);
+		lcd_send_string("Selecteer Item:");
+		lcd_put_cur(1,0);
+		lcd_send_string(Menu_Items[Selected_Menu_Item]);
+		
+		//duw op knop 2 om tussen menu items te switchen
+		if(__HAL_GPIO_EXTI_GET_FLAG(Button2_Pin))
+		{
+			if(Selected_Menu_Item < 4){
+					Selected_Menu_Item++;
+			}
+			else{
+				Selected_Menu_Item = 0;
+			}
+			
+			printf("button2 pressed");
+			lcd_clear();
+			lcd_put_cur(0,0);
+			lcd_send_string("Selecteer Item:");
+			lcd_put_cur(1,0);
+			lcd_send_string(Menu_Items[Selected_Menu_Item]);
+			HAL_GPIO_EXTI_IRQHandler(Button2_Pin);
+		}
+		//enter button ingdrukt
+		if(__HAL_GPIO_EXTI_GET_FLAG(Button1_Pin))
+		{
+			printf("enter\n");
+			HAL_GPIO_EXTI_IRQHandler(Button1_Pin);
+		}
+		
+		if(__HAL_GPIO_EXTI_GET_FLAG(B1_Pin)){
+			Open_menu = false;
+			LCD_Startup();
+			printf("close_Menu\n");
+		}
+	}
 }
 	
 //UART
@@ -461,15 +524,23 @@ int fgetc(FILE *f)
 
 
 //Externe interrputs
-void EXTI4_15_IRQHandler(void)
+void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 {
-	//Interrupt blauwe buttun button 
-	if(__HAL_GPIO_EXTI_GET_FLAG(B1_Pin)){
-		
+	//Interrupt Button 1 button 
+	if(GPIO_Pin == Button1_Pin){
+			if(Open_menu == false){
+				printf("openmenu\n");
+				Open_menu = true;
+				Menu();
+			}
 	}
-	
+	//Interrupt blauwe button button 
+	//if(GPIO_Pin == B1_Pin){
+	//
+	//}
+		
 	//Interrupt op externe pin PC11
-	if(__HAL_GPIO_EXTI_GET_FLAG(PC11_Pin)){
+	if(GPIO_Pin == PC11_Pin){
 		
 		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 		
@@ -481,19 +552,15 @@ void EXTI4_15_IRQHandler(void)
 		LastPulse = CurrentPulse;
 		
 	}
-	
-	//reset flag
-	HAL_GPIO_EXTI_IRQHandler(PC11_Pin);
-  HAL_GPIO_EXTI_IRQHandler(B1_Pin);
 }
 
 //timer 16 interrupt
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if (htim == &htim16){
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+//{
+	//if (htim == &htim16){
 			//ticks++;
-	}
-}
+	//}
+//}
 /* USER CODE END 4 */
 
 /**

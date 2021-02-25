@@ -67,8 +67,7 @@ UART_HandleTypeDef huart2;
 	//In te stellen waarde van verbruiker voor overige productie
 	int DAC_Voltage_Out_value;
 	int DAC_Max_Voltage_Out_value = 4095;
-	int waarde_te_veel_geproduceerd = 200;
-	int waarde_apparaat = 300;
+	int waarde_apparaat = 2000;
 	float send_percent;
 	
 	float Gemeten_KWh = 0.0;
@@ -90,9 +89,9 @@ static void MX_TIM16_Init(void);
 static void MX_DAC_Init(void);
 /* USER CODE BEGIN PFP */
 static void LCD_Startup(void);
-static void LCD_Update(int productie, int verbruik);
+static void LCD_Update(int Gemeten_KWh, int output_DAC);
 static void Berekenen_KWH_Waarden(void);
-static void Aansturen_DAC(int kwh);
+static void Aansturen_DAC(float kwh);
 static void Menu(void);
 /* USER CODE END PFP */
 
@@ -154,7 +153,7 @@ int main(void)
   {
 		Berekenen_KWH_Waarden();
 		Aansturen_DAC(Gemeten_KWh);
-		LCD_Update(Gemeten_KWh, TijdTussenPulsen);
+		LCD_Update((float)Gemeten_KWh, send_percent*100);
 		HAL_Delay(500);
 		
 		
@@ -399,46 +398,52 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void LCD_Update(productie, verbruik){
+void LCD_Update(Gemeten_KWh, output_DAC){
   char prod[10];
 	char verb[10];
-  sprintf(prod, "%d", productie);
-	sprintf(verb, "%d", verbruik);
+  sprintf(prod, "%d", Gemeten_KWh);
+	sprintf(verb, "%d", output_DAC);
 	
-	lcd_put_cur(0,5);
-	lcd_send_string("        ");
-	lcd_put_cur(1,5);
-	lcd_send_string("        ");
-	lcd_put_cur(0,6);
+	lcd_put_cur(0,8);
+	lcd_send_string("     ");
+	lcd_put_cur(1,7);
+	lcd_send_string("     ");
+	lcd_put_cur(0,9);
 	lcd_send_string(prod);
-	lcd_put_cur(1,6);
+	lcd_put_cur(1,9);
 	lcd_send_string(verb);
 }
 void LCD_Startup(void){
+	
+	
 	lcd_clear();
 	lcd_put_cur(0,0);
-	lcd_send_string("Prod:");
-	lcd_put_cur(0,5);
+	lcd_send_string("Gemeten:");
+	lcd_put_cur(0,8);
 	lcd_send_string("0");
 	lcd_put_cur(0,13);
 	lcd_send_string("kWH");
 	lcd_put_cur(1,0);
-	lcd_send_string("Verb:");
-	lcd_put_cur(1,5);
+	lcd_send_string("Output:");
+	lcd_put_cur(1,7);
 	lcd_send_string("0");
 	lcd_put_cur(1,13);
-	lcd_send_string("kWH");
+	lcd_send_string("%");
 
 }
 //BESTUREN DAC
-void Aansturen_DAC(int kwh){
+void Aansturen_DAC(float kwh){
 		//bepalen hoeveel percent van de uitgang van de DAC mag aangestuurd worden.
-		send_percent = (float)kwh/(float)waarde_apparaat;
+		//*100 omdat waarde_apparaat voorlopig in W staat idpv KW
+		send_percent = ((float)kwh*1000)/(float)waarde_apparaat;
 		DAC_Voltage_Out_value = DAC_Max_Voltage_Out_value*send_percent;
 	
 		//verander de value van de DAC
-		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DAC_Voltage_Out_value);
-		
+		if(send_percent>1){
+			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DAC_Max_Voltage_Out_value);
+		}else{
+			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DAC_Voltage_Out_value);
+		}
 		//print naar de seriele poort
 		printf("The float value : %f\n", send_percent);
 		printf("DAC_Voltage_Out_value : %i\n", DAC_Voltage_Out_value);
@@ -448,6 +453,7 @@ void Aansturen_DAC(int kwh){
 void Berekenen_KWH_Waarden(void){
 		float waarde = 3600000/Pulsen_Per_KWH;
 		Gemeten_KWh = (float)waarde/TijdTussenPulsen;
+		printf("The gemeten KWh : %f\n\n", Gemeten_KWh);
 }
 
 void Menu(void){

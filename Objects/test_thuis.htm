@@ -3,7 +3,11 @@
 <title>Static Call Graph - [.\Objects\test_thuis.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\test_thuis.axf</H1><HR>
+<<<<<<< Updated upstream
 <BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6150002: Last Updated: Thu Feb 25 14:03:30 2021
+=======
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6150002: Last Updated: Thu Feb 25 16:22:50 2021
+>>>>>>> Stashed changes
 <BR><P>
 <H3>Maximum Stack Usage =        408 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -262,7 +266,8 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[47]"></a>__aeabi_f2d</STRONG> (Thumb, 40 bytes, Stack size 0 bytes, f2d.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[49]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Berekenen_KWH_Waarden
+<BR><BR>[Called By]<UL><LI><a href="#[83]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LCD_Update
+<LI><a href="#[49]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Berekenen_KWH_Waarden
 <LI><a href="#[42]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Aansturen_DAC
 </UL>
 
@@ -890,7 +895,7 @@ Global Symbols
 <LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LCD_Startup
 </UL>
 
-<P><STRONG><a name="[25]"></a>main</STRONG> (Thumb, 124 bytes, Stack size 0 bytes, main.o(.text.main))
+<P><STRONG><a name="[25]"></a>main</STRONG> (Thumb, 116 bytes, Stack size 0 bytes, main.o(.text.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 176<LI>Call Chain = main &rArr; SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_InitTick &rArr; HAL_SYSTICK_Config &rArr; SysTick_Config
 </UL>
 <BR>[Calls]<UL><LI><a href="#[95]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;lcd_init
@@ -996,7 +1001,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[25]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[7f]"></a>LCD_Startup</STRONG> (Thumb, 136 bytes, Stack size 24 bytes, main.o(.text.LCD_Startup))
+<P><STRONG><a name="[7f]"></a>LCD_Startup</STRONG> (Thumb, 132 bytes, Stack size 24 bytes, main.o(.text.LCD_Startup))
 <BR><BR>[Stack]<UL><LI>Max Depth = 152<LI>Call Chain = LCD_Startup &rArr; lcd_send_string &rArr; lcd_send_data &rArr; HAL_I2C_Master_Transmit &rArr; I2C_WaitOnTXISFlagUntilTimeout &rArr; I2C_IsAcknowledgeFailed
 </UL>
 <BR>[Calls]<UL><LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;lcd_send_string
@@ -1007,11 +1012,12 @@ Local Symbols
 <LI><a href="#[52]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Menu
 </UL>
 
-<P><STRONG><a name="[83]"></a>LCD_Update</STRONG> (Thumb, 108 bytes, Stack size 48 bytes, main.o(.text.LCD_Update))
-<BR><BR>[Stack]<UL><LI>Max Depth = 176<LI>Call Chain = LCD_Update &rArr; lcd_send_string &rArr; lcd_send_data &rArr; HAL_I2C_Master_Transmit &rArr; I2C_WaitOnTXISFlagUntilTimeout &rArr; I2C_IsAcknowledgeFailed
+<P><STRONG><a name="[83]"></a>LCD_Update</STRONG> (Thumb, 80 bytes, Stack size 40 bytes, main.o(.text.LCD_Update))
+<BR><BR>[Stack]<UL><LI>Max Depth = 168<LI>Call Chain = LCD_Update &rArr; lcd_send_string &rArr; lcd_send_data &rArr; HAL_I2C_Master_Transmit &rArr; I2C_WaitOnTXISFlagUntilTimeout &rArr; I2C_IsAcknowledgeFailed
 </UL>
 <BR>[Calls]<UL><LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;lcd_send_string
 <LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;lcd_put_cur
+<LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
 <LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[25]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main

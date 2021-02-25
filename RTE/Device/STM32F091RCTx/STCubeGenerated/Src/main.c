@@ -89,7 +89,7 @@ static void MX_TIM16_Init(void);
 static void MX_DAC_Init(void);
 /* USER CODE BEGIN PFP */
 static void LCD_Startup(void);
-static void LCD_Update(int Gemeten_KWh, int output_DAC);
+static void LCD_Update(float Gemeten_KWh, int output_DAC);
 static void Berekenen_KWH_Waarden(void);
 static void Aansturen_DAC(float kwh);
 static void Menu(void);
@@ -153,8 +153,10 @@ int main(void)
   {
 		Berekenen_KWH_Waarden();
 		Aansturen_DAC(Gemeten_KWh);
-		LCD_Update((float)Gemeten_KWh, send_percent*100);
-		HAL_Delay(500);
+		
+		
+		LCD_Update(Gemeten_KWh, send_percent*100);
+		HAL_Delay(50);
 		
 		
     /* USER CODE END WHILE */
@@ -398,34 +400,35 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void LCD_Update(Gemeten_KWh, output_DAC){
+void LCD_Update(float Gemeten_KWh, int output_DAC){
   char prod[10];
 	char verb[10];
-  sprintf(prod, "%d", Gemeten_KWh);
-	sprintf(verb, "%d", output_DAC);
+  sprintf(prod, "%2.2f", Gemeten_KWh);
+	sprintf(verb, "%3d", output_DAC);
 	
-	lcd_put_cur(0,8);
+	/*lcd_put_cur(0,7);
 	lcd_send_string("     ");
 	lcd_put_cur(1,7);
-	lcd_send_string("     ");
-	lcd_put_cur(0,9);
+	lcd_send_string("     ");*/
+	lcd_put_cur(0,8);
 	lcd_send_string(prod);
 	lcd_put_cur(1,9);
 	lcd_send_string(verb);
 }
+
 void LCD_Startup(void){
 	
 	
 	lcd_clear();
 	lcd_put_cur(0,0);
-	lcd_send_string("Gemeten:");
+	lcd_send_string("Gemeten");
 	lcd_put_cur(0,8);
 	lcd_send_string("0");
 	lcd_put_cur(0,13);
-	lcd_send_string("kWH");
+	lcd_send_string("KWh");
 	lcd_put_cur(1,0);
-	lcd_send_string("Output:");
-	lcd_put_cur(1,7);
+	lcd_send_string("Output");
+	lcd_put_cur(1,11);
 	lcd_send_string("0");
 	lcd_put_cur(1,13);
 	lcd_send_string("%");

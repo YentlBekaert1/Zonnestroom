@@ -4,7 +4,7 @@ Dit project maakt gebruik van het nucleo development board STM32F091RCT6 meer in
 
 ![GitHub Logo](/images/schema.png)
 
-### Lijst met gerbuikte pinnen:
+### Lijst met gerbuikte pinnen op STM:
 * DAC => PA4
 * I2C => PB8 en PB9
 * Interrupts => PC8, PC10, PC11, PC12

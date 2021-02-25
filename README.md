@@ -1,8 +1,17 @@
 # Zonnestroom
+### Beschrijving
+
+Het doel van dit project is om ervoor te zorgen dat de overtollige energie die de zonnepanelen produceren niet terug op het net gestuurd word maar verbruikt word. We gebruiken een STM32F091 om een KWh meter uit te lezen en via solid state relais een verbruiker te regelen.
 
 Dit project maakt gebruik van het nucleo development board STM32F091RCT6 meer informatie hier: https://www.st.com/en/microcontrollers-microprocessors/stm32f091rc.html#overview
 
+Electronische opstelling: 
 ![GitHub Logo](/images/schema.png)
+
+### Componenten:
+* STM32F091RCT6
+* XTR-115UA
+* Crydom PMP2450W 
 
 ### Lijst met gerbuikte pinnen op STM:
 * DAC => PA4

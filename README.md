@@ -14,10 +14,10 @@ Dit project maakt gebruik van het nucleo development board STM32F091RCT6 meer in
 * Crydom PMP2450W 
 
 ### Lijst met gerbuikte pinnen op STM:
-* DAC => PA4
-* I2C => PB8 en PB9
-* Interrupts => PC8, PC10, PC11, PC12
-* UART => PA2, PA3
+* DAC => PA4 (DAC om xtr115 aan te sturen)
+* I2C => PB8 en PB9 (LCD)
+* Interrupts => PC11, PC12 (PC11 = drukknop rotary encoder, PC12 = interrupt om pulsen kWh te meten)
+* UART => PA2, PA3 (Debugging)
 * CLOCK => PF0-OSC_IN, PF1-OSC_OUT
 
 ### Formule KWh berkenen aan de hand van pulsen:

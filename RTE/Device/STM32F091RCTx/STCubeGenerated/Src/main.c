@@ -48,6 +48,7 @@ DAC_HandleTypeDef hdac;
 
 I2C_HandleTypeDef hi2c1;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart2;
@@ -76,7 +77,21 @@ UART_HandleTypeDef huart2;
 	//variablen voor menu
 	bool Open_menu = false;
 	bool Menu_Enter = false;
+	bool start_up_menu = true;
+	bool enter = false;
 	
+	int Rotery_encoder_counter = 0;  
+	
+	char Menu_Items[3] [40] =
+		{ "Pulsen per KW  ",
+			"Vermogen verbr.",
+			"Close Menu     ",
+		};
+	int Selected_Menu_Item = 0;
+	int new_value = 0;
+	bool instellen_verbuiker = false;
+	bool instellen_pulsen = false;
+
 		
 /* USER CODE END PV */
 
@@ -87,12 +102,12 @@ static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_DAC_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 static void LCD_Startup(void);
 static void LCD_Update(float Gemeten_KWh, int output_DAC);
 static void Berekenen_KWH_Waarden(void);
 static void Aansturen_DAC(float kwh);
-static void Menu(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -132,11 +147,15 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM16_Init();
   MX_DAC_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	
 		//LCD INIT
+		HAL_Delay(500);
 		lcd_init ();
+		HAL_Delay(500);
 		LCD_Startup();
+		HAL_Delay(500);
 		
 		//Start timer
 		//clock = 48MHZ Prescaler = 4800 -1 => 10Khz = 1 tick per 0.0001 sec = 100us
@@ -145,19 +164,119 @@ int main(void)
 		//start DAC
 		HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 		
+		HAL_TIM_Encoder_Start(&htim1,TIM_CHANNEL_ALL); 
+		//timer 1 voor rotary encoder
+		
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		/*if(start_up_menu == true){
+			Menu();
+			start_up_menu = false;
+		}*/
+		
 		Berekenen_KWH_Waarden();
 		Aansturen_DAC(Gemeten_KWh);
-		
-		
 		LCD_Update(Gemeten_KWh, send_percent*100);
-		HAL_Delay(50);
+		HAL_Delay(100);
 		
+		
+		while(Open_menu == true){
+		lcd_put_cur(0,0);
+		lcd_send_string("Selecteer Item: ");
+		lcd_put_cur(1,0);
+		lcd_send_string(Menu_Items[Selected_Menu_Item]);
+		
+		Rotery_encoder_counter = TIM1->CNT;  
+		
+		if(new_value != Rotery_encoder_counter){
+			new_value = Rotery_encoder_counter;
+			if(Selected_Menu_Item == 2){
+				Selected_Menu_Item = 0;
+			}else{
+					Selected_Menu_Item++;
+			}				
+			
+			lcd_clear();
+		}
+		while(instellen_pulsen == true){
+			lcd_clear();
+			bool on = true;
+			int Pulsen_Per_KWH_tijdelijk = 0;
+			while(on == true){
+				if (TIM1->CNT < 40000){
+					Pulsen_Per_KWH_tijdelijk  = Pulsen_Per_KWH + TIM1->CNT*100;  
+				}
+				lcd_put_cur(0,0);
+				lcd_send_string("Pulsen per kWh");
+				lcd_put_cur(1,0);
+				char verb[10];
+				sprintf(verb, "%7i", Pulsen_Per_KWH_tijdelijk);
+				lcd_send_string(verb);
+			
+				if(enter == true)
+				{
+					enter = false;
+					HAL_GPIO_EXTI_IRQHandler(Button1_Pin);
+					Pulsen_Per_KWH = (float)Pulsen_Per_KWH_tijdelijk;
+					printf("close instellen verbr.");
+					on = false;
+					instellen_pulsen = false;
+				}
+			}
+		}
+		
+		while(instellen_verbuiker == true){
+			lcd_clear();
+			bool on = true;
+			int waarde_verbruiker_tijdelijk = waarde_apparaat;
+			while(on == true){
+				waarde_verbruiker_tijdelijk = TIM1->CNT*100;  
+				lcd_put_cur(0,0);
+				lcd_send_string("Waarde verbr. (W)");
+				lcd_put_cur(1,0);
+				char verb[10];
+				sprintf(verb, "%7i", waarde_verbruiker_tijdelijk);
+				lcd_send_string(verb);
+				if(enter == true)
+				{
+					enter = false;
+					HAL_GPIO_EXTI_IRQHandler(Button1_Pin);
+					waarde_apparaat = waarde_verbruiker_tijdelijk;
+					printf("close instellen verbr.");
+					on = false;
+					instellen_verbuiker = false;
+				}
+			}
+		}
+		
+		//enter button ingdrukt
+		if(enter == true){
+			printf("Menu enter\n");
+			enter = false;
+			
+			if(Selected_Menu_Item == 0){
+				instellen_pulsen = true;
+				//printf("Insettel pulsen per kwh\n");
+			}
+			
+			if(Selected_Menu_Item == 1){
+				//Open_menu = false;
+				instellen_verbuiker = true;
+				//printf("instellen verbruiker\n");
+			}
+			
+			//close menu
+			if(Selected_Menu_Item == 2){
+				Open_menu = false;
+				LCD_Startup();
+				printf("close_Menu\n");
+			}
+		}
+	}
 		
     /* USER CODE END WHILE */
 
@@ -296,6 +415,56 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_Encoder_InitTypeDef sConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 4;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 50000;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC1Filter = 10;
+  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC2Filter = 10;
+  if (HAL_TIM_Encoder_Init(&htim1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
   * @brief TIM16 Initialization Function
   * @param None
   * @retval None
@@ -311,7 +480,7 @@ static void MX_TIM16_Init(void)
 
   /* USER CODE END TIM16_Init 1 */
   htim16.Instance = TIM16;
-  htim16.Init.Prescaler = 48000 - 1;
+  htim16.Init.Prescaler = 4800 - 1;
   htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim16.Init.Period = 50000- 1;
   htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -380,8 +549,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : B1_Pin Button2_Pin PC11_Pin Button1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin|Button2_Pin|PC11_Pin|Button1_Pin;
+  /*Configure GPIO pins : B1_Pin PC11_Pin */
+  GPIO_InitStruct.Pin = B1_Pin|PC11_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -392,6 +561,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Button1_Pin */
+  GPIO_InitStruct.Pin = Button1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Button1_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
@@ -417,8 +592,6 @@ void LCD_Update(float Gemeten_KWh, int output_DAC){
 }
 
 void LCD_Startup(void){
-	
-	
 	lcd_clear();
 	lcd_put_cur(0,0);
 	lcd_send_string("Gemeten");
@@ -432,7 +605,6 @@ void LCD_Startup(void){
 	lcd_send_string("0");
 	lcd_put_cur(1,13);
 	lcd_send_string("%");
-
 }
 //BESTUREN DAC
 void Aansturen_DAC(float kwh){
@@ -457,59 +629,9 @@ void Berekenen_KWH_Waarden(void){
 		float waarde = 3600000/Pulsen_Per_KWH;
 		Gemeten_KWh = (float)waarde/TijdTussenPulsen;
 		printf("The gemeten KWh : %f\n\n", Gemeten_KWh);
+		printf("tijd tussen pulsen: %d\n\n", TijdTussenPulsen);
 }
 
-void Menu(void){
-	//menu init
-	char Menu_Items[5] [40] =
-		{ "Pulsen per KW",
-			"Vermogen verbr.",
-			"Menu Item 3",
-			"Menu Item 4",
-			"Close Menu",
-		};
-	lcd_clear();
-	int Selected_Menu_Item = 0;
-		
-	//als er op knop 1 gedrukt wordt, wordt het menu geopend. 
-	while(Open_menu == true){
-		lcd_put_cur(0,0);
-		lcd_send_string("Selecteer Item:");
-		lcd_put_cur(1,0);
-		lcd_send_string(Menu_Items[Selected_Menu_Item]);
-		
-		//duw op knop 2 om tussen menu items te switchen
-		if(__HAL_GPIO_EXTI_GET_FLAG(Button2_Pin))
-		{
-			if(Selected_Menu_Item < 4){
-					Selected_Menu_Item++;
-			}
-			else{
-				Selected_Menu_Item = 0;
-			}
-			
-			printf("button2 pressed");
-			lcd_clear();
-			lcd_put_cur(0,0);
-			lcd_send_string("Selecteer Item:");
-			lcd_put_cur(1,0);
-			lcd_send_string(Menu_Items[Selected_Menu_Item]);
-			HAL_GPIO_EXTI_IRQHandler(Button2_Pin);
-		}
-		//enter button ingdrukt
-		if(__HAL_GPIO_EXTI_GET_FLAG(Button1_Pin))
-		{
-			printf("enter\n");
-			HAL_GPIO_EXTI_IRQHandler(Button1_Pin);
-		}
-		
-		if(__HAL_GPIO_EXTI_GET_FLAG(B1_Pin)){
-			Open_menu = false;
-			LCD_Startup();
-			printf("close_Menu\n");
-		}
-	}
-}
 	
 //UART
 int fputc (int ch, FILE *f)
@@ -531,10 +653,13 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 {
 	//Interrupt Button 1 button 
 	if(GPIO_Pin == Button1_Pin){
+			
 			if(Open_menu == false){
 				printf("openmenu\n");
 				Open_menu = true;
-				Menu();
+			}else{
+				enter = true;
+				printf("enter\n");
 			}
 	}
 	//Interrupt blauwe button button 
@@ -542,7 +667,7 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 	//
 	//}
 		
-	//Interrupt op externe pin PC11
+	//Interrupt op externe pin PC11 meten van Kwh
 	if(GPIO_Pin == PC11_Pin){
 		
 		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);

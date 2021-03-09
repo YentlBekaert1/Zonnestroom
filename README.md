@@ -16,7 +16,7 @@ Dit project maakt gebruik van het nucleo development board STM32F091RCT6 meer in
 ### Lijst met gerbuikte pinnen op STM:
 * DAC => PA4 (DAC om xtr115 aan te sturen)
 * I2C => PB8 en PB9 (LCD)
-* Interrupts => PC6, PC8, PC11, PC12 (PC11 = drukknop rotary encoder, PC6 = OUTA rotrary encoder, PC8 = OUTA rotrary encoder,  PC12 = interrupt om pulsen kWh te meten)
+* Interrupts => PC6, PC8, PC11, PC12 (PC12 = drukknop rotary encoder, PC6 = OUTA rotrary encoder, PC8 = OUTA rotrary encoder,  PC11 = interrupt om pulsen kWh te meten)
 * UART => PA2, PA3 (Debugging)
 * CLOCK => PF0-OSC_IN, PF1-OSC_OUT
 

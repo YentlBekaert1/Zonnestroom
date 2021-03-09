@@ -48,7 +48,6 @@ DAC_HandleTypeDef hdac;
 
 I2C_HandleTypeDef hi2c1;
 
-TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart2;
@@ -75,23 +74,14 @@ UART_HandleTypeDef huart2;
 	float Pulsen_Per_KWH = 1000;
 	
 	//variablen voor menu
-	bool Open_menu = false;
-	bool Menu_Enter = false;
-	bool start_up_menu = true;
-	bool enter = false;
-	
-	int Rotery_encoder_counter = 0;  
-	
-	char Menu_Items[3] [40] =
-		{ "Pulsen per KW  ",
-			"Vermogen verbr.",
-			"Close Menu     ",
-		};
-	int Selected_Menu_Item = 0;
-	int new_value = 0;
-	bool instellen_verbuiker = false;
-	bool instellen_pulsen = false;
-
+	char screen = 0;
+	char arrowpos = 0;
+	int counter = 0;
+	volatile bool Instellingen = false;
+	volatile bool Programma_start = false;
+	volatile bool TurnDetected = false;
+	volatile bool Up = false;
+	volatile bool Button = false;
 		
 /* USER CODE END PV */
 
@@ -102,10 +92,14 @@ static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_DAC_Init(void);
-static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
-static void LCD_Startup(void);
-static void LCD_Update(float Gemeten_KWh, int output_DAC);
+static void screen0(void);
+static void screen1(void);
+static void screen2(void);
+static void screen3(void);
+static void screen4(void);
+static void screen5(void);
+static void Notify_by_startup(void);
 static void Berekenen_KWH_Waarden(void);
 static void Aansturen_DAC(float kwh);
 /* USER CODE END PFP */
@@ -147,15 +141,34 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM16_Init();
   MX_DAC_Init();
-  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	
 		//LCD INIT
 		HAL_Delay(500);
 		lcd_init ();
 		HAL_Delay(500);
-		LCD_Startup();
+		lcd_put_cur(0,0);
+		lcd_send_string("Project");
+		lcd_put_cur(1,0);
+		lcd_send_string("Zonnestroom");
+		HAL_Delay(3000);
+		lcd_clear();
+		lcd_put_cur(0,0);
+		lcd_send_string("Welcome");
+		int i = 0;
+		for(i = 0; i<5; i++){
+			lcd_put_cur(0,8+i);
+			lcd_send_string(".");
+			HAL_Delay(500);
+		}
+		lcd_clear();
+		Notify_by_startup();
+		screen0();
+		lcd_put_cur(0,0);
+		lcd_send_string(">");
 		HAL_Delay(500);
+		
+		
 		
 		//Start timer
 		//clock = 48MHZ Prescaler = 4800 -1 => 10Khz = 1 tick per 0.0001 sec = 100us
@@ -164,124 +177,209 @@ int main(void)
 		//start DAC
 		HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 		
-		HAL_TIM_Encoder_Start(&htim1,TIM_CHANNEL_ALL); 
-		//timer 1 voor rotary encoder
-		
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {
-		/*if(start_up_menu == true){
-			Menu();
-			start_up_menu = false;
-		}*/
-		
-		Berekenen_KWH_Waarden();
-		Aansturen_DAC(Gemeten_KWh);
-		LCD_Update(Gemeten_KWh, send_percent*100);
-		HAL_Delay(100);
-		
-		
-		while(Open_menu == true){
-		lcd_put_cur(0,0);
-		lcd_send_string("Selecteer Item: ");
-		lcd_put_cur(1,0);
-		lcd_send_string(Menu_Items[Selected_Menu_Item]);
-		
-		Rotery_encoder_counter = TIM1->CNT;  
-		
-		if(new_value != Rotery_encoder_counter){
-			new_value = Rotery_encoder_counter;
-			if(Selected_Menu_Item == 2){
-				Selected_Menu_Item = 0;
-			}else{
-					Selected_Menu_Item++;
-			}				
-			
-			lcd_clear();
-		}
-		while(instellen_pulsen == true){
-			lcd_clear();
-			bool on = true;
-			int Pulsen_Per_KWH_tijdelijk = 0;
-			while(on == true){
-				if (TIM1->CNT < 40000){
-					Pulsen_Per_KWH_tijdelijk  = Pulsen_Per_KWH + TIM1->CNT*100;  
-				}
-				lcd_put_cur(0,0);
-				lcd_send_string("Pulsen per kWh");
-				lcd_put_cur(1,0);
-				char verb[10];
-				sprintf(verb, "%7i", Pulsen_Per_KWH_tijdelijk);
-				lcd_send_string(verb);
-			
-				if(enter == true)
-				{
-					enter = false;
-					HAL_GPIO_EXTI_IRQHandler(Button1_Pin);
-					Pulsen_Per_KWH = (float)Pulsen_Per_KWH_tijdelijk;
-					printf("close instellen verbr.");
-					on = false;
-					instellen_pulsen = false;
-				}
-			}
+  {	
+		if(Programma_start == true){
+				Berekenen_KWH_Waarden();
+				Aansturen_DAC(Gemeten_KWh);
+	
+				char prod[10];
+				char outp[10];
+				sprintf(prod, "%2.2f", Gemeten_KWh);
+				sprintf(outp, "%.3d", (int)send_percent*100);
+				lcd_put_cur(0,6);
+				lcd_send_string("       ");
+				lcd_put_cur(0,6);
+				lcd_send_string(prod);
+				lcd_put_cur(1,7);
+				lcd_send_string(outp);
+				
+				HAL_Delay(100);
 		}
 		
-		while(instellen_verbuiker == true){
-			lcd_clear();
-			bool on = true;
-			int waarde_verbruiker_tijdelijk = waarde_apparaat;
-			while(on == true){
-				waarde_verbruiker_tijdelijk = TIM1->CNT*100;  
-				lcd_put_cur(0,0);
-				lcd_send_string("Waarde verbr. (W)");
-				lcd_put_cur(1,0);
-				char verb[10];
-				sprintf(verb, "%7i", waarde_verbruiker_tijdelijk);
-				lcd_send_string(verb);
-				if(enter == true)
-				{
-					enter = false;
-					HAL_GPIO_EXTI_IRQHandler(Button1_Pin);
-					waarde_apparaat = waarde_verbruiker_tijdelijk;
-					printf("close instellen verbr.");
-					on = false;
-					instellen_verbuiker = false;
-				}
+		if(Button == true){
+			HAL_Delay(200);
+			switch (screen){
+				//if homescreen
+				case 0:
+					if(arrowpos == 0){
+						screen = 2;
+						screen2();
+						lcd_put_cur(0,0);
+						lcd_send_string(">");
+						arrowpos = 0;
+					}
+					else{
+						screen = 1;
+						Programma_start = true;
+						screen1();
+					}
+					break;
+				//if mesurement screen
+				case 1:
+						Programma_start = false;
+						screen = 0;
+						screen0();
+						arrowpos = 0;
+						lcd_put_cur(0,0);
+						lcd_send_string(">");
+				break;
+				//if settingsscreen
+				case 2:
+					switch(arrowpos){
+						case 0:
+							screen = 3;
+							screen3();
+							arrowpos = 0;
+						break;
+						case 1:
+							screen = 4;
+							screen4();
+							arrowpos = 1;
+						break;
+						case 2:
+							screen = 0;
+							screen0();
+							arrowpos = 0;
+							lcd_put_cur(0,0);
+							lcd_send_string(">");
+						break;
+					}
+				break;
+				case 3:
+					screen = 2;
+					screen2();
+					lcd_put_cur(0,0);
+					lcd_send_string(">");
+				break;
+				case 4:
+					screen = 2;
+					screen2();
+					lcd_put_cur(1,0);
+					lcd_send_string(">");
+				break;
 			}
+			Button = false;
+		}
+		if(TurnDetected == true){
+			HAL_Delay(200);
+			switch(screen){
+				//if homecreen
+				case 0:
+					switch (arrowpos){
+						case 0:
+							if(!Up){
+								screen0();
+								lcd_put_cur(1,0);
+								lcd_send_string(">");
+								arrowpos = 1;
+							}
+							break;
+						case 1:
+							if(Up){
+								screen0();
+								lcd_put_cur(0,0);
+								lcd_send_string(">");
+								arrowpos = 0;
+							}
+							break;
+					}
+				break;
+				//if settingsscreen
+				case 2:
+					switch (arrowpos){
+						case 0:
+							if(!Up){
+								screen2();
+								lcd_put_cur(1,0);
+								lcd_send_string(">");
+								arrowpos = 1;
+							}
+							break;
+						case 1:
+							if(Up){
+								screen2();
+								lcd_put_cur(0,0);
+								lcd_send_string(">");
+								arrowpos = 0;
+							}else{
+								screen5();
+								lcd_put_cur(0,0);
+								lcd_send_string(">");
+								arrowpos = 2;
+							}
+						break;
+						case 2:
+							if(Up){
+								screen2();
+								lcd_put_cur(1,0);
+								lcd_send_string(">");
+								arrowpos = 1;
+							}
+						break;
+					}
+					break;
+					case 3:
+						if(Up){
+							Pulsen_Per_KWH = Pulsen_Per_KWH + 100;
+							char pulsen[10];
+							sprintf(pulsen, "%.f",Pulsen_Per_KWH);
+							lcd_put_cur(1,1);
+							lcd_send_string("         ");
+							lcd_put_cur(1,1);
+							lcd_send_string(pulsen);
+							
+						}else{
+							Pulsen_Per_KWH = Pulsen_Per_KWH - 100;
+							if(Pulsen_Per_KWH < 100){
+								Pulsen_Per_KWH = 0;
+							}
+							char pulsen[10];
+							sprintf(pulsen, "%.f",Pulsen_Per_KWH);
+							lcd_put_cur(1,1);
+							lcd_send_string("         ");
+							lcd_put_cur(1,1);
+							lcd_send_string(pulsen);
+						}
+					break;
+					case 4:
+						if(Up){
+							waarde_apparaat = waarde_apparaat + 100;
+							char consumer[10];
+							sprintf(consumer, "%0.i",waarde_apparaat);
+							lcd_put_cur(1,1);
+							lcd_send_string("         ");
+							lcd_put_cur(1,1);
+							lcd_send_string(consumer);
+							
+						}else{
+							waarde_apparaat = waarde_apparaat - 100;
+							if(waarde_apparaat < 100){
+								waarde_apparaat = 0;
+							}
+							char consumer[10];
+							sprintf(consumer, "%0.i",waarde_apparaat);
+							lcd_put_cur(1,1);
+							lcd_send_string("         ");
+							lcd_put_cur(1,1);
+							lcd_send_string(consumer);
+						}
+					break;
+			}
+			TurnDetected = false;
+			
 		}
 		
-		//enter button ingdrukt
-		if(enter == true){
-			printf("Menu enter\n");
-			enter = false;
-			
-			if(Selected_Menu_Item == 0){
-				instellen_pulsen = true;
-				//printf("Insettel pulsen per kwh\n");
-			}
-			
-			if(Selected_Menu_Item == 1){
-				//Open_menu = false;
-				instellen_verbuiker = true;
-				//printf("instellen verbruiker\n");
-			}
-			
-			//close menu
-			if(Selected_Menu_Item == 2){
-				Open_menu = false;
-				LCD_Startup();
-				printf("close_Menu\n");
-			}
-		}
 	}
 		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+  
   /* USER CODE END 3 */
 }
 
@@ -415,56 +513,6 @@ static void MX_I2C1_Init(void)
 }
 
 /**
-  * @brief TIM1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM1_Init(void)
-{
-
-  /* USER CODE BEGIN TIM1_Init 0 */
-
-  /* USER CODE END TIM1_Init 0 */
-
-  TIM_Encoder_InitTypeDef sConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM1_Init 1 */
-
-  /* USER CODE END TIM1_Init 1 */
-  htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 4;
-  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 50000;
-  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
-  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 10;
-  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 10;
-  if (HAL_TIM_Encoder_Init(&htim1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM1_Init 2 */
-
-  /* USER CODE END TIM1_Init 2 */
-
-}
-
-/**
   * @brief TIM16 Initialization Function
   * @param None
   * @retval None
@@ -549,8 +597,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : B1_Pin PC11_Pin */
-  GPIO_InitStruct.Pin = B1_Pin|PC11_Pin;
+  /*Configure GPIO pins : B1_Pin RE_OUTB_Pin RE_OUTA_Pin PC11_Pin */
+  GPIO_InitStruct.Pin = B1_Pin|RE_OUTB_Pin|RE_OUTA_Pin|PC11_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -575,42 +623,121 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void LCD_Update(float Gemeten_KWh, int output_DAC){
-  char prod[10];
-	char verb[10];
-  sprintf(prod, "%2.2f", Gemeten_KWh);
-	sprintf(verb, "%3d", output_DAC);
-	
-	/*lcd_put_cur(0,7);
-	lcd_send_string("     ");
-	lcd_put_cur(1,7);
-	lcd_send_string("     ");*/
-	lcd_put_cur(0,8);
-	lcd_send_string(prod);
-	lcd_put_cur(1,9);
-	lcd_send_string(verb);
+void screen0(){
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Settings");
+	lcd_put_cur(1,1);
+	lcd_send_string("kWh measurement");
 }
-
-void LCD_Startup(void){
+void screen1(){
 	lcd_clear();
 	lcd_put_cur(0,0);
-	lcd_send_string("Gemeten");
-	lcd_put_cur(0,8);
-	lcd_send_string("0");
+	lcd_send_string("Value");
 	lcd_put_cur(0,13);
-	lcd_send_string("KWh");
+	lcd_send_string("kWh");
 	lcd_put_cur(1,0);
 	lcd_send_string("Output");
-	lcd_put_cur(1,11);
-	lcd_send_string("0");
 	lcd_put_cur(1,13);
 	lcd_send_string("%");
 }
+void screen2(){
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Pulses per KWH");
+	lcd_put_cur(1,1);
+	lcd_send_string("Consumer");
+}
+void screen5(){
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Back");
+}
+void screen3(){
+	char pulsen[10];
+	sprintf(pulsen, "%.f",Pulsen_Per_KWH);
+	
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Pulses per KWH");
+	lcd_put_cur(1,1);
+	lcd_send_string(pulsen);
+}
+void screen4(){
+	char consumer[10];
+	sprintf(consumer, "%.i" ,waarde_apparaat);
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Consumer (W)");
+	lcd_put_cur(1,1);
+	lcd_send_string(consumer);
+}
+void Notify_by_startup(){
+		lcd_put_cur(0,0);
+		lcd_send_string("Please look first to settings                            ");
+		HAL_Delay(1000);
+	lcd_put_cur(0,0);
+		lcd_send_string("lease look first to settings                            ");
+		HAL_Delay(200);
+	lcd_put_cur(0,0);
+		lcd_send_string("ease look first to settings                            ");
+		HAL_Delay(200);
+	lcd_put_cur(0,0);
+		lcd_send_string("ase look first to settings                            ");
+		HAL_Delay(200);
+	lcd_put_cur(0,0);
+		lcd_send_string("e look first to settings                            ");
+		HAL_Delay(200);
+	lcd_put_cur(0,0);
+		lcd_send_string(" look first to settings                            ");
+		HAL_Delay(200);
+	lcd_put_cur(0,0);
+		lcd_send_string("look first to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("ook first to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("ok first to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("k first to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string(" first to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("first to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("irst to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("rst to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("st to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("t to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string(" to settings                            ");
+		HAL_Delay(200);
+		lcd_put_cur(0,0);
+		lcd_send_string("to settings                            ");
+		HAL_Delay(2000);
+		
+}
+
 //BESTUREN DAC
 void Aansturen_DAC(float kwh){
 		//bepalen hoeveel percent van de uitgang van de DAC mag aangestuurd worden.
 		//*100 omdat waarde_apparaat voorlopig in W staat idpv KW
 		send_percent = ((float)kwh*1000)/(float)waarde_apparaat;
+		if(send_percent > 1){
+			send_percent = 1;
+		}
 		DAC_Voltage_Out_value = DAC_Max_Voltage_Out_value*send_percent;
 	
 		//verander de value van de DAC
@@ -653,20 +780,19 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 {
 	//Interrupt Button 1 button 
 	if(GPIO_Pin == Button1_Pin){
-			
-			if(Open_menu == false){
-				printf("openmenu\n");
-				Open_menu = true;
-			}else{
-				enter = true;
-				printf("enter\n");
-			}
+		 Button = true;
 	}
-	//Interrupt blauwe button button 
-	//if(GPIO_Pin == B1_Pin){
-	//
-	//}
-		
+	if(GPIO_Pin == RE_OUTA_Pin){
+		 TurnDetected = true;
+		 //Up = (HAL_GPIO_ReadPin(RE_OUTA_GPIO_Port,RE_OUTA_Pin) == HAL_GPIO_ReadPin(RE_OUTB_GPIO_Port,RE_OUTB_Pin));
+		if(HAL_GPIO_ReadPin(RE_OUTB_GPIO_Port,RE_OUTB_Pin)){
+			Up = HAL_GPIO_ReadPin(RE_OUTA_GPIO_Port,RE_OUTA_Pin);
+		}else{
+			Up = !HAL_GPIO_ReadPin(RE_OUTA_GPIO_Port,RE_OUTA_Pin);
+		}
+	}
+
+	
 	//Interrupt op externe pin PC11 meten van Kwh
 	if(GPIO_Pin == PC11_Pin){
 		
@@ -681,6 +807,7 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 		
 	}
 }
+
 
 //timer 16 interrupt
 //void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)

@@ -63,6 +63,7 @@ UART_HandleTypeDef huart2;
 	//variablen voor pulsmeting
 	volatile uint32_t ticks = 0;
 	volatile uint32_t LastPulse = 0, TijdTussenPulsen = 0, CurrentPulse = 0;
+	bool new_pulse = false;
 
 	//In te stellen waarde van verbruiker voor overige productie
 	int DAC_Voltage_Out_value;
@@ -102,6 +103,17 @@ static void screen5(void);
 static void Notify_by_startup(void);
 static void Berekenen_KWH_Waarden(void);
 static void Aansturen_DAC(float kwh);
+
+unsigned char Arrow_L[]= { 
+	0x00,
+  0x04,
+  0x06,
+  0x1F,
+  0x1F,
+  0x06,
+  0x04,
+  0x00
+};
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -146,6 +158,7 @@ int main(void)
 		//LCD INIT
 		HAL_Delay(500);
 		lcd_init ();
+		CreateCustomCharacter(Arrow_L,1);
 		HAL_Delay(500);
 		lcd_put_cur(0,0);
 		lcd_send_string("Project");
@@ -165,13 +178,14 @@ int main(void)
 		Notify_by_startup();
 		screen0();
 		lcd_put_cur(0,0);
-		lcd_send_string(">");
+		lcd_send_data(1);
 		HAL_Delay(500);
 		
 		
 		
 		//Start timer
 		//clock = 48MHZ Prescaler = 4800 -1 => 10Khz = 1 tick per 0.0001 sec = 100us
+		//clock = 1MHZ Prescaler = 10000 -1 => 100Hz = 1 tick per 0.001 sec = 10ms
 		HAL_TIM_Base_Start_IT(&htim16);
 	
 		//start DAC
@@ -184,21 +198,28 @@ int main(void)
   while (1)
   {	
 		if(Programma_start == true){
+			if(new_pulse == true){
 				Berekenen_KWH_Waarden();
 				Aansturen_DAC(Gemeten_KWh);
 	
 				char prod[10];
 				char outp[10];
 				sprintf(prod, "%2.2f", Gemeten_KWh);
-				sprintf(outp, "%.3d", (int)send_percent*100);
+				sprintf(outp, "%.0f", send_percent*100);
 				lcd_put_cur(0,6);
 				lcd_send_string("       ");
 				lcd_put_cur(0,6);
 				lcd_send_string(prod);
 				lcd_put_cur(1,7);
+				lcd_send_string("    ");
+				lcd_put_cur(1,7);
 				lcd_send_string(outp);
 				
-				HAL_Delay(100);
+				new_pulse = false;
+			}else{
+				ticks = __HAL_TIM_GET_COUNTER(&htim16);
+					printf("ticks : %i\n", ticks);
+			}
 		}
 		
 		if(Button == true){
@@ -210,7 +231,7 @@ int main(void)
 						screen = 2;
 						screen2();
 						lcd_put_cur(0,0);
-						lcd_send_string(">");
+						lcd_send_data(1);
 						arrowpos = 0;
 					}
 					else{
@@ -226,7 +247,7 @@ int main(void)
 						screen0();
 						arrowpos = 0;
 						lcd_put_cur(0,0);
-						lcd_send_string(">");
+						lcd_send_data(1);
 				break;
 				//if settingsscreen
 				case 2:
@@ -246,7 +267,7 @@ int main(void)
 							screen0();
 							arrowpos = 0;
 							lcd_put_cur(0,0);
-							lcd_send_string(">");
+							lcd_send_data(1);
 						break;
 					}
 				break;
@@ -254,13 +275,13 @@ int main(void)
 					screen = 2;
 					screen2();
 					lcd_put_cur(0,0);
-					lcd_send_string(">");
+					lcd_send_data(1);
 				break;
 				case 4:
 					screen = 2;
 					screen2();
 					lcd_put_cur(1,0);
-					lcd_send_string(">");
+					lcd_send_data(1);
 				break;
 			}
 			Button = false;
@@ -275,7 +296,7 @@ int main(void)
 							if(!Up){
 								screen0();
 								lcd_put_cur(1,0);
-								lcd_send_string(">");
+								lcd_send_data(1);
 								arrowpos = 1;
 							}
 							break;
@@ -283,7 +304,7 @@ int main(void)
 							if(Up){
 								screen0();
 								lcd_put_cur(0,0);
-								lcd_send_string(">");
+								lcd_send_data(1);
 								arrowpos = 0;
 							}
 							break;
@@ -296,7 +317,7 @@ int main(void)
 							if(!Up){
 								screen2();
 								lcd_put_cur(1,0);
-								lcd_send_string(">");
+								lcd_send_data(1);
 								arrowpos = 1;
 							}
 							break;
@@ -304,12 +325,12 @@ int main(void)
 							if(Up){
 								screen2();
 								lcd_put_cur(0,0);
-								lcd_send_string(">");
+								lcd_send_data(1);
 								arrowpos = 0;
 							}else{
 								screen5();
 								lcd_put_cur(0,0);
-								lcd_send_string(">");
+								lcd_send_data(1);
 								arrowpos = 2;
 							}
 						break;
@@ -317,7 +338,7 @@ int main(void)
 							if(Up){
 								screen2();
 								lcd_put_cur(1,0);
-								lcd_send_string(">");
+								lcd_send_data(1);
 								arrowpos = 1;
 							}
 						break;
@@ -396,12 +417,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL2;
   RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -412,10 +434,10 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
     Error_Handler();
   }
@@ -528,7 +550,7 @@ static void MX_TIM16_Init(void)
 
   /* USER CODE END TIM16_Init 1 */
   htim16.Instance = TIM16;
-  htim16.Init.Prescaler = 4800 - 1;
+  htim16.Init.Prescaler = 10000 - 1;
   htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim16.Init.Period = 50000- 1;
   htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -560,7 +582,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -597,8 +619,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : B1_Pin RE_OUTB_Pin RE_OUTA_Pin PC11_Pin */
-  GPIO_InitStruct.Pin = B1_Pin|RE_OUTB_Pin|RE_OUTA_Pin|PC11_Pin;
+  /*Configure GPIO pins : B1_Pin PC6 PC11_Pin */
+  GPIO_InitStruct.Pin = B1_Pin|GPIO_PIN_6|PC11_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -609,6 +631,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : RE_OUTA_Pin RE_OUTB_Pin */
+  GPIO_InitStruct.Pin = RE_OUTA_Pin|RE_OUTB_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Button1_Pin */
   GPIO_InitStruct.Pin = Button1_Pin;
@@ -753,10 +781,10 @@ void Aansturen_DAC(float kwh){
 
 //Bereken waarde KWH meter
 void Berekenen_KWH_Waarden(void){
-		float waarde = 3600000/Pulsen_Per_KWH;
+		float waarde = 360000/Pulsen_Per_KWH;
 		Gemeten_KWh = (float)waarde/TijdTussenPulsen;
-		printf("The gemeten KWh : %f\n\n", Gemeten_KWh);
-		printf("tijd tussen pulsen: %d\n\n", TijdTussenPulsen);
+		printf("The gemeten KWh : %f\n", Gemeten_KWh);
+		printf("tijd tussen pulsen: %d\n", TijdTussenPulsen);
 }
 
 	
@@ -804,6 +832,8 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 		CurrentPulse = ticks;
 		TijdTussenPulsen =   CurrentPulse - LastPulse ;
 		LastPulse = CurrentPulse;
+		
+		new_pulse = true;
 		
 	}
 }

@@ -114,6 +114,67 @@ unsigned char Arrow_L[]= {
   0x04,
   0x00
 };
+unsigned char Vives1[] = {
+	0x03,
+  0x07,
+  0x0F,
+  0x1F,
+  0x0A,
+  0x0B,
+  0x0A,
+  0x0A
+};
+unsigned char Vives2[] = {
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x15,
+  0x15,
+  0x15,
+  0x15
+};
+unsigned char Vives3[] = {
+  0x18,
+  0x1C,
+  0x1E,
+  0x1F,
+  0x04,
+  0x0D,
+  0x04,
+  0x0E
+};
+unsigned char Vives4[] = {
+	0x16,
+  0x1F,
+  0x1F,
+  0x0F,
+  0x07,
+  0x03,
+  0x01,
+  0x00
+};
+unsigned char Vives5[] = {
+	0x1B,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F
+};
+unsigned char Vives6[] = {
+	0x04,
+  0x1F,
+  0x1F,
+  0x1E,
+  0x1C,
+  0x18,
+  0x10,
+  0x00
+};
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -159,29 +220,31 @@ int main(void)
 		HAL_Delay(500);
 		lcd_init ();
 		CreateCustomCharacter(Arrow_L,1);
+		CreateCustomCharacter(Vives1,2);
+		CreateCustomCharacter(Vives2,3);
+		CreateCustomCharacter(Vives3,4);
+		CreateCustomCharacter(Vives4,5);
+		CreateCustomCharacter(Vives5,6);
+		CreateCustomCharacter(Vives6,7);
+		
 		HAL_Delay(500);
 		lcd_put_cur(0,0);
-		lcd_send_string("Project");
+		lcd_send_data(2);
+		lcd_send_data(3);
+		lcd_send_data(4);
+		lcd_send_string(" Project");
 		lcd_put_cur(1,0);
-		lcd_send_string("Zonnestroom");
-		HAL_Delay(3000);
-		lcd_clear();
-		lcd_put_cur(0,0);
-		lcd_send_string("Welcome");
-		int i = 0;
-		for(i = 0; i<5; i++){
-			lcd_put_cur(0,8+i);
-			lcd_send_string(".");
-			HAL_Delay(500);
-		}
+		lcd_send_data(5);
+		lcd_send_data(6);
+		lcd_send_data(7);
+		lcd_send_string(" Zonnestroom");
+		HAL_Delay(5000);
 		lcd_clear();
 		Notify_by_startup();
 		screen0();
 		lcd_put_cur(0,0);
 		lcd_send_data(1);
 		HAL_Delay(500);
-		
-		
 		
 		//Start timer
 		//clock = 48MHZ Prescaler = 4800 -1 => 10Khz = 1 tick per 0.0001 sec = 100us
@@ -442,7 +505,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_I2C1;
-  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_HSI;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {

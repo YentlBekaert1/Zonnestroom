@@ -87,3 +87,11 @@ void lcd_send_string (char *str)
 {
 	while (*str) lcd_send_data (*str++);
 }
+void CreateCustomCharacter (unsigned char *Pattern, const char Location)
+{ 
+	int i=0; 
+	lcd_send_cmd (0x40+(Location*8));     //Send the Address of CGRAM
+	for (i=0; i<8; i++){
+		lcd_send_data(Pattern [ i ] );         //Pass the bytes of pattern on LCD 
+	}
+}

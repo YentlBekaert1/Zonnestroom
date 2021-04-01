@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
@@ -56,7 +55,10 @@ UART_HandleTypeDef huart2;
 	//uart variablen voor debug op seriele poort
   char uart_buf[50];
 	int uart_buf_len;
-	
+	uint8_t UART2_rxBuffer[16] = {0};
+	UART_HandleTypeDef huart2;
+	char received_consumer_value[8] = {0};
+	char received_pulses_value[8] = {0};
 	//TIMER16	Variable
 	uint16_t timer_val;
 	
@@ -83,6 +85,8 @@ UART_HandleTypeDef huart2;
 	volatile bool TurnDetected = false;
 	volatile bool Up = false;
 	volatile bool Button = false;
+	
+	
 		
 /* USER CODE END PV */
 
@@ -227,7 +231,7 @@ int main(void)
 		CreateCustomCharacter(Vives5,6);
 		CreateCustomCharacter(Vives6,7);
 		
-		HAL_Delay(500);
+		/*HAL_Delay(500);
 		lcd_put_cur(0,0);
 		lcd_send_data(2);
 		lcd_send_data(3);
@@ -238,9 +242,8 @@ int main(void)
 		lcd_send_data(6);
 		lcd_send_data(7);
 		lcd_send_string(" Zonnestroom");
-		HAL_Delay(5000);
+		HAL_Delay(5000);*/
 		lcd_clear();
-		Notify_by_startup();
 		screen0();
 		lcd_put_cur(0,0);
 		lcd_send_data(1);
@@ -254,6 +257,8 @@ int main(void)
 		//start DAC
 		HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 		
+		//UART inturrupt
+		HAL_UART_Receive_IT (&huart2, UART2_rxBuffer, 16);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -264,7 +269,6 @@ int main(void)
 			if(new_pulse == true){
 				Berekenen_KWH_Waarden();
 				Aansturen_DAC(Gemeten_KWh);
-	
 				char prod[10];
 				char outp[10];
 				sprintf(prod, "%2.2f", Gemeten_KWh);
@@ -277,14 +281,9 @@ int main(void)
 				lcd_send_string("    ");
 				lcd_put_cur(1,7);
 				lcd_send_string(outp);
-				
 				new_pulse = false;
-			}else{
-				ticks = __HAL_TIM_GET_COUNTER(&htim16);
-					printf("ticks : %i\n", ticks);
 			}
 		}
-		
 		if(Button == true){
 			HAL_Delay(200);
 			switch (screen){
@@ -350,6 +349,7 @@ int main(void)
 			Button = false;
 		}
 		if(TurnDetected == true){
+			
 			HAL_Delay(200);
 			switch(screen){
 				//if homecreen
@@ -455,8 +455,11 @@ int main(void)
 					break;
 			}
 			TurnDetected = false;
-			
 		}
+	
+			//char testInteger;
+			//scanf("%s", &testInteger);  
+			//printf("%s",&testInteger);
 		
 	}
 		
@@ -838,16 +841,16 @@ void Aansturen_DAC(float kwh){
 			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DAC_Voltage_Out_value);
 		}
 		//print naar de seriele poort
-		printf("The float value : %f\n", send_percent);
-		printf("DAC_Voltage_Out_value : %i\n", DAC_Voltage_Out_value);
+		//printf("The float value : %f\n", send_percent);
+		printf("D: %.f\n", send_percent*100);
 }
 
 //Bereken waarde KWH meter
 void Berekenen_KWH_Waarden(void){
 		float waarde = 360000/Pulsen_Per_KWH;
 		Gemeten_KWh = (float)waarde/TijdTussenPulsen;
-		printf("The gemeten KWh : %f\n", Gemeten_KWh);
-		printf("tijd tussen pulsen: %d\n", TijdTussenPulsen);
+		printf("K: %f\n", Gemeten_KWh);
+		//printf("tijd tussen pulsen: %d\n", TijdTussenPulsen);
 }
 
 	
@@ -864,6 +867,7 @@ int fgetc(FILE *f)
 	HAL_UART_Receive(&huart2,(uint8_t*)&ch,1,HAL_MAX_DELAY);
 	return		ch;
 }
+
 
 
 //Externe interrputs
@@ -899,6 +903,47 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 		new_pulse = true;
 		
 	}
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+   // HAL_UART_Transmit(&huart2, UART2_rxBuffer, 8, 100);
+    HAL_UART_Receive_IT(&huart2, UART2_rxBuffer, 16);
+		if(UART2_rxBuffer[0] == 99){	
+			/*lcd_clear();
+			lcd_put_cur(0,0);
+			lcd_send_string((char*)UART2_rxBuffer);*/
+			int i = 0;
+			int index1 = 0;
+			int index2 = 0;
+			for(i=0; i<16 ; i++){
+				if(0<i && i<8){
+					if(UART2_rxBuffer[i] !=63){
+					received_consumer_value[index1] = UART2_rxBuffer[i];
+					index1++;					
+					
+				}
+			}
+				else if(i>9){
+					if(UART2_rxBuffer[i] !=63){
+					received_pulses_value[index2] = UART2_rxBuffer[i];
+					index2++;
+					}
+				}
+			}
+			int received_consumer;
+			sscanf(received_consumer_value, "%d", &received_consumer);
+			waarde_apparaat = received_consumer;
+			int received_pulses;
+			sscanf(received_pulses_value, "%d", &received_pulses);
+			Pulsen_Per_KWH = received_pulses;
+			/*char outp[10];
+			sprintf(outp, "%d", received_consumer);
+			lcd_put_cur(1,0);
+			lcd_send_string(outp);
+			lcd_put_cur(1,8);
+			lcd_send_string((char*)received_pulses_value);*/
+		}
 }
 
 

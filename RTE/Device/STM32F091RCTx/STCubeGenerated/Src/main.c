@@ -416,6 +416,7 @@ int main(void)
 							lcd_send_string("         ");
 							lcd_put_cur(1,1);
 							lcd_send_string(pulsen);
+							printf("P: %i\n", (int)Pulsen_Per_KWH);
 							
 						}else{
 							Pulsen_Per_KWH = Pulsen_Per_KWH - 100;
@@ -428,6 +429,7 @@ int main(void)
 							lcd_send_string("         ");
 							lcd_put_cur(1,1);
 							lcd_send_string(pulsen);
+							printf("P: %i\n", (int)Pulsen_Per_KWH);
 						}
 					break;
 					case 4:
@@ -439,6 +441,7 @@ int main(void)
 							lcd_send_string("         ");
 							lcd_put_cur(1,1);
 							lcd_send_string(consumer);
+							printf("C: %i\n", waarde_apparaat);
 							
 						}else{
 							waarde_apparaat = waarde_apparaat - 100;
@@ -451,6 +454,7 @@ int main(void)
 							lcd_send_string("         ");
 							lcd_put_cur(1,1);
 							lcd_send_string(consumer);
+							printf("C: %i\n", waarde_apparaat);
 						}
 					break;
 			}
@@ -909,6 +913,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
    // HAL_UART_Transmit(&huart2, UART2_rxBuffer, 8, 100);
     HAL_UART_Receive_IT(&huart2, UART2_rxBuffer, 16);
+		//als er c wordt ontvanfen (ACII code) lees dan de waarden en verwerk ze
 		if(UART2_rxBuffer[0] == 99){	
 			/*lcd_clear();
 			lcd_put_cur(0,0);
@@ -943,6 +948,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			lcd_send_string(outp);
 			lcd_put_cur(1,8);
 			lcd_send_string((char*)received_pulses_value);*/
+		}
+		//als er Q wordt ontvanfen (ACII code) stuur dan de values van Pulsen en waarde apparaat door.
+		if(UART2_rxBuffer[0] == 81){
+			printf("P: %i\n", (int)Pulsen_Per_KWH);
+			printf("C: %i\n", waarde_apparaat);
 		}
 }
 

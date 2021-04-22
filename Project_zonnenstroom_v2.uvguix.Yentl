@@ -93,8 +93,8 @@
       <flags>2</flags>
       <showCmd>3</showCmd>
       <MinPosition>
-        <xPos>-1</xPos>
-        <yPos>-1</yPos>
+        <xPos>-32000</xPos>
+        <yPos>-32000</yPos>
       </MinPosition>
       <MaxPosition>
         <xPos>-1</xPos>
@@ -3687,11 +3687,11 @@
       </Doc>
       <Doc>
         <Name>.\RTE\Device\STM32F091RCTx\STCubeGenerated\Src\main.c</Name>
-        <ColumnNumber>19</ColumnNumber>
-        <TopLine>629</TopLine>
-        <CurrentLine>892</CurrentLine>
+        <ColumnNumber>17</ColumnNumber>
+        <TopLine>579</TopLine>
+        <CurrentLine>1095</CurrentLine>
         <Folding>1</Folding>
-        <ContractedFolders>583,630,668,714,746,781,831,838,849,857,867,876,909</ContractedFolders>
+        <ContractedFolders>389,586,633,671,717,749,784,834,841,852,860,870,879,912</ContractedFolders>
         <PaneID>0</PaneID>
       </Doc>
       <Doc>

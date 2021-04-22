@@ -352,6 +352,7 @@ int main(void)
 						//Kies sensor 1
 						case 0:
 							selected_sensor = 1;
+							printf("S: %i\n", selected_sensor);
 							screen6();
 							lcd_put_cur(0,0);
 							lcd_send_data(1);
@@ -359,6 +360,7 @@ int main(void)
 						//Kies sensor 2
 						case 1:
 							selected_sensor = 2;
+							printf("S: %i\n", selected_sensor);
 							screen6();
 							lcd_put_cur(1,0);
 							lcd_send_data(1);
@@ -366,6 +368,7 @@ int main(void)
 						//Kies sensor 3
 						case 2:
 							selected_sensor = 3;
+							printf("S: %i\n", selected_sensor);
 							screen7();
 							lcd_put_cur(0,0);
 							lcd_send_data(1);
@@ -1089,8 +1092,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		}
 		//als er Q wordt ontvangen (ACII code) stuur dan de values van pulsen en waarde apparaat door.
 		if(UART2_rxBuffer[0] == 81){
-			printf("P: %i\n", (int)Pulsen_Per_KWH);
-			printf("C: %i\n", waarde_apparaat);
+			printf("P:%i\n", (int)Pulsen_Per_KWH);
+			printf("C:%i\n", waarde_apparaat);
+			printf("S:%i\n", selected_sensor);
 		}
 }
 

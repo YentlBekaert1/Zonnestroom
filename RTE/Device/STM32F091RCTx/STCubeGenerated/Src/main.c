@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
@@ -79,14 +80,18 @@ UART_HandleTypeDef huart2;
 	//variablen voor menu
 	char screen = 0;
 	char arrowpos = 0;
+	char arrowpos_sensor = 0;
 	int counter = 0;
 	volatile bool Instellingen = false;
-	volatile bool Programma_start = false;
 	volatile bool TurnDetected = false;
 	volatile bool Up = false;
 	volatile bool Button = false;
+	int selected_sensor;
 	
+	volatile bool Programma_start = false;
 	
+	//variable om de gemeten waarden te resetten als er geen puls meer komt.
+	uint8_t pulsen_counter = 0;
 		
 /* USER CODE END PV */
 
@@ -104,6 +109,8 @@ static void screen2(void);
 static void screen3(void);
 static void screen4(void);
 static void screen5(void);
+static void screen6(void);
+static void screen7(void);
 static void Notify_by_startup(void);
 static void Berekenen_KWH_Waarden(void);
 static void Aansturen_DAC(float kwh);
@@ -118,65 +125,16 @@ unsigned char Arrow_L[]= {
   0x04,
   0x00
 };
-unsigned char Vives1[] = {
-	0x03,
-  0x07,
-  0x0F,
-  0x1F,
-  0x0A,
-  0x0B,
-  0x0A,
-  0x0A
-};
-unsigned char Vives2[] = {
-  0x1F,
-  0x1F,
-  0x1F,
-  0x1F,
-  0x15,
-  0x15,
-  0x15,
-  0x15
-};
-unsigned char Vives3[] = {
-  0x18,
-  0x1C,
+
+unsigned char Selector[]= { 
+  0x02,
+  0x06,
+  0x0E,
   0x1E,
-  0x1F,
-  0x04,
-  0x0D,
-  0x04,
-  0x0E
-};
-unsigned char Vives4[] = {
-	0x16,
-  0x1F,
-  0x1F,
-  0x0F,
-  0x07,
-  0x03,
-  0x01,
-  0x00
-};
-unsigned char Vives5[] = {
-	0x1B,
-  0x1F,
-  0x1F,
-  0x1F,
-  0x1F,
-  0x1F,
-  0x1F,
-  0x1F
-};
-unsigned char Vives6[] = {
-	0x04,
-  0x1F,
-  0x1F,
   0x1E,
-  0x1C,
-  0x18,
-  0x10,
-  0x00
+  0x0E,
+  0x06,
+  0x02
 };
 
 /* USER CODE END PFP */
@@ -224,12 +182,7 @@ int main(void)
 		HAL_Delay(500);
 		lcd_init ();
 		CreateCustomCharacter(Arrow_L,1);
-		CreateCustomCharacter(Vives1,2);
-		CreateCustomCharacter(Vives2,3);
-		CreateCustomCharacter(Vives3,4);
-		CreateCustomCharacter(Vives4,5);
-		CreateCustomCharacter(Vives5,6);
-		CreateCustomCharacter(Vives6,7);
+		CreateCustomCharacter(Selector,2);
 		
 		/*HAL_Delay(500);
 		lcd_put_cur(0,0);
@@ -265,6 +218,24 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {	
+		/* read PB4 = de toggle swicth */
+		if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4))
+		{
+			//start meten van kWh en aanturen DAC
+			Programma_start = true;
+		}else{
+			//stop meten van kWh en aanturen DAC
+			Programma_start = false;
+			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, 0);
+			if (screen == 1){
+				lcd_put_cur(0,6);
+				lcd_send_string("       ");
+				lcd_put_cur(1,7);
+				lcd_send_string("    ");
+		
+			}
+		}
+		// lus die overlopen wordt als het programma gestart is
 		if(Programma_start == true){
 			if(new_pulse == true){
 				Berekenen_KWH_Waarden();
@@ -273,22 +244,27 @@ int main(void)
 				char outp[10];
 				sprintf(prod, "%2.2f", Gemeten_KWh);
 				sprintf(outp, "%.0f", send_percent*100);
-				lcd_put_cur(0,6);
-				lcd_send_string("       ");
-				lcd_put_cur(0,6);
-				lcd_send_string(prod);
-				lcd_put_cur(1,7);
-				lcd_send_string("    ");
-				lcd_put_cur(1,7);
-				lcd_send_string(outp);
+				if(screen == 1){
+					lcd_put_cur(0,6);
+					lcd_send_string("       ");
+					lcd_put_cur(0,6);
+					lcd_send_string(prod);
+					lcd_put_cur(1,7);
+					lcd_send_string("    ");
+					lcd_put_cur(1,7);
+					lcd_send_string(outp);
+				}
 				new_pulse = false;
+				pulsen_counter ++;
 			}
 		}
+		// als er op de knop van de rotary encoder gedrukt wordt. Deze knop dient als enter
 		if(Button == true){
 			HAL_Delay(200);
 			switch (screen){
-				//if homescreen
+				//Als je op de homescreen bent
 				case 0:
+					//waneer er op Settings wordt geklikt
 					if(arrowpos == 0){
 						screen = 2;
 						screen2();
@@ -296,35 +272,58 @@ int main(void)
 						lcd_send_data(1);
 						arrowpos = 0;
 					}
+					//waneer er op kWh measeurement wordt geklikt
 					else{
 						screen = 1;
-						Programma_start = true;
 						screen1();
+						char prod[10];
+						char outp[10];
+						sprintf(prod, "%2.2f", Gemeten_KWh);
+						sprintf(outp, "%.0f", send_percent*100);
+						lcd_put_cur(0,6);
+						lcd_send_string("       ");
+						lcd_put_cur(0,6);
+						lcd_send_string(prod);
+						lcd_put_cur(1,7);
+						lcd_send_string("    ");
+						lcd_put_cur(1,7);
+						lcd_send_string(outp);
 					}
 					break;
-				//if mesurement screen
+				//als je op de mesurement screen bent
 				case 1:
-						Programma_start = false;
 						screen = 0;
 						screen0();
 						arrowpos = 0;
 						lcd_put_cur(0,0);
 						lcd_send_data(1);
 				break;
-				//if settingsscreen
+				//als je op de settingsscreen bent
 				case 2:
 					switch(arrowpos){
+						//instellen pulsen per kilowattuur
 						case 0:
 							screen = 3;
 							screen3();
 							arrowpos = 0;
 						break;
+						//instellen Verbruiker
 						case 1:
 							screen = 4;
 							screen4();
 							arrowpos = 1;
 						break;
+						//kiezen van sensor
 						case 2:
+							screen = 6;
+							screen6();
+							lcd_put_cur(0,0);
+							lcd_send_data(1);
+							arrowpos = 2;
+							arrowpos_sensor = 0;
+						break;
+						//back
+						case 3:
 							screen = 0;
 							screen0();
 							arrowpos = 0;
@@ -333,28 +332,65 @@ int main(void)
 						break;
 					}
 				break;
+				// als je op het scherm bent om de Pulsen per kWh in te stellen
 				case 3:
 					screen = 2;
 					screen2();
 					lcd_put_cur(0,0);
 					lcd_send_data(1);
 				break;
+				// als je op het scherm bent om de Verbruiker in te stellen
 				case 4:
 					screen = 2;
 					screen2();
 					lcd_put_cur(1,0);
 					lcd_send_data(1);
 				break;
+				//als je op de sensor settingsscreen bent
+				case 6:
+					switch(arrowpos_sensor){
+						//Kies sensor 1
+						case 0:
+							selected_sensor = 1;
+							screen6();
+							lcd_put_cur(0,0);
+							lcd_send_data(1);
+						break;
+						//Kies sensor 2
+						case 1:
+							selected_sensor = 2;
+							screen6();
+							lcd_put_cur(1,0);
+							lcd_send_data(1);
+						break;
+						//Kies sensor 3
+						case 2:
+							selected_sensor = 3;
+							screen7();
+							lcd_put_cur(0,0);
+							lcd_send_data(1);
+						break;
+						//back to settingscreen
+						case 3:
+							screen = 2;
+							screen5();
+							arrowpos = 2;
+							lcd_put_cur(0,0);
+							lcd_send_data(1);
+						break;
+					}
+				break;
 			}
 			Button = false;
 		}
+		//Als er aan de knop van de rotary encoder gedraaid wordt. Hiermee kun je omhoog of omlaag gaan.
 		if(TurnDetected == true){
-			
 			HAL_Delay(200);
 			switch(screen){
 				//if homecreen
 				case 0:
 					switch (arrowpos){
+						//positie om naar settings te gaan
 						case 0:
 							if(!Up){
 								screen0();
@@ -363,6 +399,7 @@ int main(void)
 								arrowpos = 1;
 							}
 							break;
+						//positie om naar kWh leasurement te gaan
 						case 1:
 							if(Up){
 								screen0();
@@ -375,6 +412,7 @@ int main(void)
 				break;
 				//if settingsscreen
 				case 2:
+					//positie om naar Pulsen per kWh te gaan
 					switch (arrowpos){
 						case 0:
 							if(!Up){
@@ -384,6 +422,7 @@ int main(void)
 								arrowpos = 1;
 							}
 							break;
+						//positie om naar Verbruiker te gaan
 						case 1:
 							if(Up){
 								screen2();
@@ -397,16 +436,32 @@ int main(void)
 								arrowpos = 2;
 							}
 						break;
+						//positie om naar Sensor settings te gaan
 						case 2:
 							if(Up){
 								screen2();
 								lcd_put_cur(1,0);
 								lcd_send_data(1);
 								arrowpos = 1;
+							}else{
+								screen5();
+								lcd_put_cur(1,0);
+								lcd_send_data(1);
+								arrowpos = 3;
+							}
+						break;
+						//positie om naar Terug te gaan te gaan
+						case 3:
+							if(Up){
+								screen5();
+								lcd_put_cur(0,0);
+								lcd_send_data(1);
+								arrowpos = 2;
 							}
 						break;
 					}
 					break;
+					//if settingsscreen Pulsen per kWh
 					case 3:
 						if(Up){
 							Pulsen_Per_KWH = Pulsen_Per_KWH + 100;
@@ -432,6 +487,7 @@ int main(void)
 							printf("P: %i\n", (int)Pulsen_Per_KWH);
 						}
 					break;
+					//if settingsscreen Verbuiker
 					case 4:
 						if(Up){
 							waarde_apparaat = waarde_apparaat + 100;
@@ -457,16 +513,62 @@ int main(void)
 							printf("C: %i\n", waarde_apparaat);
 						}
 					break;
+					// als je op het scherm bent om senor te kiezen
+					case 6:
+					//positie om naar Pulsen per kWh te gaan
+					switch (arrowpos_sensor){
+						//positie om Sensor1 te kiezen
+						case 0:
+							if(!Up){
+								screen6();
+								lcd_put_cur(1,0);
+								lcd_send_data(1);
+								arrowpos_sensor = 1;
+							}
+							break;
+						//positie om Sensor2 te kiezen
+						case 1:
+							if(Up){
+								screen6();
+								lcd_put_cur(0,0);
+								lcd_send_data(1);
+								arrowpos_sensor = 0;
+							}else{
+								screen7();
+								lcd_put_cur(0,0);
+								lcd_send_data(1);
+								arrowpos_sensor = 2;
+							}
+						break;
+						//positie om Sensor3 te kiezen
+						case 2:
+							if(Up){
+								screen6();
+								lcd_put_cur(1,0);
+								lcd_send_data(1);
+								arrowpos_sensor = 1;
+							}else{
+								screen7();
+								lcd_put_cur(1,0);
+								lcd_send_data(1);
+								arrowpos_sensor = 3;
+							}
+						break;
+						//positie om naar Terug te gaan 
+						case 3:
+							if(Up){
+								screen7();
+								lcd_put_cur(0,0);
+								lcd_send_data(1);
+								arrowpos_sensor = 2;
+							}
+						break;
+					}
+					break;
 			}
 			TurnDetected = false;
-		}
-	
-			//char testInteger;
-			//scanf("%s", &testInteger);  
-			//printf("%s",&testInteger);
-		
+		}	
 	}
-		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -689,8 +791,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : B1_Pin PC6 PC11_Pin */
-  GPIO_InitStruct.Pin = B1_Pin|GPIO_PIN_6|PC11_Pin;
+  /*Configure GPIO pins : B1_Pin PC11_Pin */
+  GPIO_InitStruct.Pin = B1_Pin|PC11_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -713,6 +815,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(Button1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
@@ -746,11 +854,7 @@ void screen2(){
 	lcd_put_cur(1,1);
 	lcd_send_string("Consumer");
 }
-void screen5(){
-	lcd_clear();
-	lcd_put_cur(0,1);
-	lcd_send_string("Back");
-}
+
 void screen3(){
 	char pulsen[10];
 	sprintf(pulsen, "%.f",Pulsen_Per_KWH);
@@ -769,6 +873,39 @@ void screen4(){
 	lcd_send_string("Consumer (W)");
 	lcd_put_cur(1,1);
 	lcd_send_string(consumer);
+}
+void screen5(){
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Sensor");
+	lcd_put_cur(1,1);
+	lcd_send_string("Back");
+}
+void screen6(){
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Sensor1");
+	lcd_put_cur(1,1);
+	lcd_send_string("Sensor2");
+	if(selected_sensor == 1){
+		lcd_put_cur(0,15);
+		lcd_send_data(2);
+	}
+	if(selected_sensor == 2){
+		lcd_put_cur(1,15);
+		lcd_send_data(2);
+	}
+}
+void screen7(){
+	lcd_clear();
+	lcd_put_cur(0,1);
+	lcd_send_string("Sensor3");
+	lcd_put_cur(1,1);
+	lcd_send_string("Back");
+	if(selected_sensor == 3){
+		lcd_put_cur(0,15);
+		lcd_send_data(2);
+	}
 }
 void Notify_by_startup(){
 		lcd_put_cur(0,0);
@@ -907,6 +1044,7 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin)
 		new_pulse = true;
 		
 	}
+	
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -949,7 +1087,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			lcd_put_cur(1,8);
 			lcd_send_string((char*)received_pulses_value);*/
 		}
-		//als er Q wordt ontvanfen (ACII code) stuur dan de values van Pulsen en waarde apparaat door.
+		//als er Q wordt ontvangen (ACII code) stuur dan de values van pulsen en waarde apparaat door.
 		if(UART2_rxBuffer[0] == 81){
 			printf("P: %i\n", (int)Pulsen_Per_KWH);
 			printf("C: %i\n", waarde_apparaat);
@@ -958,12 +1096,28 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 
 //timer 16 interrupt
-//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-//{
-	//if (htim == &htim16){
-			//ticks++;
-	//}
-//}
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim == &htim16){
+		if(pulsen_counter < 1 && Programma_start == true){
+				Gemeten_KWh = 0;
+				Berekenen_KWH_Waarden();
+				Aansturen_DAC(Gemeten_KWh);
+				printf("K: %f\n", Gemeten_KWh);
+				if (screen == 1){
+					lcd_put_cur(0,6);
+					lcd_send_string("       ");
+					lcd_put_cur(0,6);
+					lcd_send_data(48);
+					lcd_put_cur(1,7);
+					lcd_send_string("    ");
+					lcd_put_cur(1,7);
+					lcd_send_data(48);
+				}
+		}
+		pulsen_counter = 0;
+	}
+}
 /* USER CODE END 4 */
 
 /**
